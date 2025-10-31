@@ -15,7 +15,7 @@
 
 ## 📋 系统要求
 
-- Python 3.8+
+- Python 3.12
 - 现代浏览器 (Chrome 80+, Firefox 75+, Safari 13+)
 - 麦克风设备
 
@@ -29,7 +29,7 @@ cd sense_voice_standalone
 
 ### 2. 创建虚拟环境
 ```bash
-python -m venv .venv
+uv .venv
 source .venv/bin/activate  # Linux/Mac
 # 或
 .venv\Scripts\activate     # Windows

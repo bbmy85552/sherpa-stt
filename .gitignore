@@ -94,3 +94,6 @@ env/
 # Python 缓存文件
 __pycache__/
 *.pyc
+
+# 模型文件目录
+models/
