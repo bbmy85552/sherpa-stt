@@ -26,6 +26,8 @@
 git clone <项目地址>
 cd sense_voice_standalone
 ```
+models-download:https://pan.baidu.com/s/1pFrB3Dbg3LCji1qI6zH5jg 
+提取码: 6666 
 
 ### 2. 创建虚拟环境
 ```bash
