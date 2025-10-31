@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SenseVoice VAD 配置</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .config-group { margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; }
+        .config-item { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="range"] { width: 100%; margin-bottom: 5px; }
+        .value-display { text-align: center; background-color: #f8f9fa; padding: 5px; border-radius: 3px; }
+        button { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .preset-buttons { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 20px; }
+        .current-config { background-color: #e9ecef; padding: 15px; border-radius: 4px; margin-top: 20px; }
+        .description { font-size: 0.9em; color: #666; margin-top: 5px; }
+        #status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>SenseVoice VAD 配置</h1>
+
+        <div id="status" class="info">正在加载配置...</div>
+
+        <div class="config-group">
+            <h3>VAD 参数配置</h3>
+
+            <div class="config-item">
+                <label for="threshold">语音检测阈值</label>
+                <input type="range" id="threshold" min="0.1" max="0.9" step="0.05" value="0.4">
+                <div class="value-display" id="thresholdValue">0.4</div>
+                <div class="description">数值越低越敏感，建议范围: 0.3-0.6</div>
+            </div>
+
+            <div class="config-item">
+                <label for="minSilenceDuration">最小静音时长 (秒)</label>
+                <input type="range" id="minSilenceDuration" min="0.1" max="3.0" step="0.1" value="0.8">
+                <div class="value-display" id="minSilenceDurationValue">0.8</div>
+                <div class="description">判断为语音结束的最小静音时间，慢速说话建议: 0.8-1.5</div>
+            </div>
+
+            <div class="config-item">
+                <label for="minSpeechDuration">最小语音时长 (秒)</label>
+                <input type="range" id="minSpeechDuration" min="0.1" max="1.0" step="0.05" value="0.3">
+                <div class="value-display" id="minSpeechDurationValue">0.3</div>
+                <div class="description">判断为语音开始的最小语音时长，建议范围: 0.2-0.5</div>
+            </div>
+
+            <div class="config-item">
+                <label for="maxSpeechDuration">最大语音时长 (秒)</label>
+                <input type="range" id="maxSpeechDuration" min="5" max="30" step="1" value="15">
+                <div class="value-display" id="maxSpeechDurationValue">15</div>
+                <div class="description">单个语音段的最大时长，建议范围: 10-30</div>
+            </div>
+
+            <div class="config-item">
+                <label for="realtimeInterval">实时识别间隔 (秒)</label>
+                <input type="range" id="realtimeInterval" min="0.1" max="2.0" step="0.1" value="0.5">
+                <div class="value-display" id="realtimeIntervalValue">0.5</div>
+                <div class="description">实时识别的触发间隔，建议范围: 0.3-1.0</div>
+            </div>
+        </div>
+
+        <div class="preset-buttons">
+            <button class="btn-secondary" onclick="setPreset('fast')">快速说话模式</button>
+            <button class="btn-success" onclick="setPreset('normal')">正常模式</button>
+            <button class="btn-primary" onclick="setPreset('slow')">慢速说话模式</button>
+            <button class="btn-secondary" onclick="setPreset('very_slow')">极慢模式</button>
+        </div>
+
+        <div style="margin-top: 20px;">
+            <button class="btn-primary" onclick="saveConfig()">保存配置并重启服务</button>
+            <button class="btn-secondary" onclick="refreshConfig()">刷新当前配置</button>
+            <a href="/" style="text-decoration: none;"><button class="btn-secondary">返回主页</button></a>
+        </div>
+
+        <div class="current-config">
+            <h3>当前配置说明</h3>
+            <div id="configExplanation">
+                <p><strong>慢速说话友好配置:</strong></p>
+                <ul>
+                    <li>静音容忍时间增加到 <strong>800ms</strong>，避免正常停顿被误判</li>
+                    <li>降低语音检测阈值到 <strong>0.4</strong>，提高灵敏度</li>
+                    <li>实时识别间隔调整为 <strong>0.5秒</strong>，减少频繁触发</li>
+                    <li>最大语音时长支持到 <strong>15秒</strong>，适合长句表达</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showStatus(message, type = 'info') {
+            const statusDiv = document.getElementById('status');
+            statusDiv.textContent = message;
+            statusDiv.className = type;
+        }
+
+        function updateValueDisplay(inputId, valueId) {
+            const input = document.getElementById(inputId);
+            const display = document.getElementById(valueId);
+            display.textContent = input.value;
+        }
+
+        async function loadConfig() {
+            try {
+                showStatus('正在加载配置...', 'info');
+                const response = await fetch('/api/vad-config');
+                const config = await response.json();
+
+                if (config.error) {
+                    throw new Error(config.error);
+                }
+
+                // 更新滑块值
+                document.getElementById('threshold').value = config.threshold;
+                document.getElementById('minSilenceDuration').value = config.min_silence_duration;
+                document.getElementById('minSpeechDuration').value = config.min_speech_duration;
+                document.getElementById('maxSpeechDuration').value = config.max_speech_duration;
+                document.getElementById('realtimeInterval').value = config.realtime_interval;
+
+                // 更新显示值
+                updateValueDisplay('threshold', 'thresholdValue');
+                updateValueDisplay('minSilenceDuration', 'minSilenceDurationValue');
+                updateValueDisplay('minSpeechDuration', 'minSpeechDurationValue');
+                updateValueDisplay('maxSpeechDuration', 'maxSpeechDurationValue');
+                updateValueDisplay('realtimeInterval', 'realtimeIntervalValue');
+
+                showStatus('配置加载成功', 'success');
+
+            } catch (error) {
+                showStatus('加载配置失败: ' + error.message, 'error');
+            }
+        }
+
+        function setPreset(type) {
+            const presets = {
+                'fast': {
+                    threshold: 0.6,
+                    minSilenceDuration: 0.3,
+                    minSpeechDuration: 0.15,
+                    maxSpeechDuration: 10,
+                    realtimeInterval: 0.2
+                },
+                'normal': {
+                    threshold: 0.5,
+                    minSilenceDuration: 0.5,
+                    minSpeechDuration: 0.25,
+                    maxSpeechDuration: 10,
+                    realtimeInterval: 0.3
+                },
+                'slow': {
+                    threshold: 0.4,
+                    minSilenceDuration: 0.8,
+                    minSpeechDuration: 0.3,
+                    maxSpeechDuration: 15,
+                    realtimeInterval: 0.5
+                },
+                'very_slow': {
+                    threshold: 0.35,
+                    minSilenceDuration: 1.5,
+                    minSpeechDuration: 0.4,
+                    maxSpeechDuration: 20,
+                    realtimeInterval: 0.8
+                }
+            };
+
+            const preset = presets[type];
+            if (preset) {
+                Object.keys(preset).forEach(key => {
+                    const inputId = key === 'threshold' ? 'threshold' :
+                                   key === 'minSilenceDuration' ? 'minSilenceDuration' :
+                                   key === 'minSpeechDuration' ? 'minSpeechDuration' :
+                                   key === 'maxSpeechDuration' ? 'maxSpeechDuration' :
+                                   'realtimeInterval';
+
+                    const valueId = inputId + 'Value';
+                    document.getElementById(inputId).value = preset[key];
+                    updateValueDisplay(inputId, valueId);
+                });
+
+                const descriptions = {
+                    'fast': '快速说话模式 - 适合语速较快的用户',
+                    'normal': '正常模式 - 适合大多数用户',
+                    'slow': '慢速说话模式 - 适合语速较慢的用户，增加停顿容忍',
+                    'very_slow': '极慢模式 - 适合语速很慢或需要长时间思考的用户'
+                };
+
+                showStatus(`已切换到${descriptions[type]}`, 'info');
+            }
+        }
+
+        async function saveConfig() {
+            const config = {
+                threshold: parseFloat(document.getElementById('threshold').value),
+                min_silence_duration: parseFloat(document.getElementById('minSilenceDuration').value),
+                min_speech_duration: parseFloat(document.getElementById('minSpeechDuration').value),
+                max_speech_duration: parseFloat(document.getElementById('maxSpeechDuration').value),
+                realtime_interval: parseFloat(document.getElementById('realtimeInterval').value)
+            };
+
+            showStatus('正在保存配置...', 'info');
+
+            // 这里配置需要重启服务器才能生效
+            const configText = `
+# SenseVoice VAD 配置
+# 保存时间: ${new Date().toLocaleString()}
+# 复制以下配置到 main.py 中的 VAD 配置部分
+
+self.vad_config.silero_vad.threshold = ${config.threshold}
+self.vad_config.silero_vad.min_silence_duration = ${config.min_silence_duration}
+self.vad_config.silero_vad.min_speech_duration = ${config.min_speech_duration}
+self.vad_config.silero_vad.max_speech_duration = ${config.max_speech_duration}
+
+# 实时识别间隔
+# 在 main.py 中搜索 "0.5" 并替换为 ${config.realtime_interval}
+
+# 配置说明:
+# - threshold: 语音检测阈值 (0.1-0.9, 越低越敏感)
+# - min_silence_duration: 最小静音时长，判断语音结束的停顿时间
+# - min_speech_duration: 最小语音时长，判断语音开始的最短时间
+# - max_speech_duration: 最大语音时长，单个语音段的限制
+# - realtime_interval: 实时识别间隔，多久触发一次实时识别
+            `;
+
+            // 创建下载链接
+            const blob = new Blob([configText], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'sense_voice_vad_config.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showStatus('配置已保存到文件，请手动应用到 main.py 并重启服务器', 'success');
+        }
+
+        function refreshConfig() {
+            loadConfig();
+        }
+
+        // 添加实时更新显示
+        document.addEventListener('DOMContentLoaded', function() {
+            const inputs = document.querySelectorAll('input[type="range"]');
+            inputs.forEach(input => {
+                input.addEventListener('input', function() {
+                    const valueId = this.id + 'Value';
+                    updateValueDisplay(this.id, valueId);
+                });
+            });
+
+            loadConfig();
+        });
+    </script>
+</body>
+</html>

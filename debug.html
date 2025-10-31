@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SenseVoice 调试页面</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .status { margin: 10px 0; padding: 10px; border-radius: 4px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        .info { background-color: #d1ecf1; color: #0c5460; }
+        button { margin: 5px; padding: 10px 20px; }
+        #logs { background-color: #f8f9fa; padding: 10px; height: 300px; overflow-y: scroll; border: 1px solid #dee2e6; }
+    </style>
+</head>
+<body>
+    <h1>SenseVoice 调试页面</h1>
+
+    <div id="connectionStatus" class="status info">连接状态: 未连接</div>
+
+    <div>
+        <button onclick="testWebSocket()">测试 WebSocket 连接</button>
+        <button onclick="testMicrophone()">测试麦克风</button>
+        <button onclick="clearLogs()">清空日志</button>
+    </div>
+
+    <div id="logs"></div>
+
+    <script>
+        let ws = null;
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.innerHTML = `<span style="color: #666;">[${timestamp}]</span> ${message}`;
+            logEntry.className = type;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function updateConnectionStatus(connected) {
+            const statusDiv = document.getElementById('connectionStatus');
+            if (connected) {
+                statusDiv.textContent = '连接状态: 已连接';
+                statusDiv.className = 'status success';
+            } else {
+                statusDiv.textContent = '连接状态: 未连接';
+                statusDiv.className = 'status error';
+            }
+        }
+
+        function testWebSocket() {
+            log('开始测试 WebSocket 连接...', 'info');
+
+            const wsUrl = `ws://${window.location.host}/ws/recognize`;
+            log(`WebSocket URL: ${wsUrl}`, 'info');
+
+            try {
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function(event) {
+                    log('WebSocket 连接成功!', 'success');
+                    updateConnectionStatus(true);
+
+                    // 发送配置消息
+                    const config = {
+                        type: "config",
+                        language: "auto",
+                        use_itn: true
+                    };
+                    ws.send(JSON.stringify(config));
+                    log('发送配置消息: ' + JSON.stringify(config), 'info');
+                };
+
+                ws.onmessage = function(event) {
+                    const message = JSON.parse(event.data);
+                    log('收到消息: ' + JSON.stringify(message), 'success');
+                };
+
+                ws.onerror = function(error) {
+                    log('WebSocket 错误: ' + error, 'error');
+                    updateConnectionStatus(false);
+                };
+
+                ws.onclose = function(event) {
+                    log(`WebSocket 连接关闭: code=${event.code}, reason=${event.reason}`, 'error');
+                    updateConnectionStatus(false);
+                };
+
+            } catch (error) {
+                log('WebSocket 创建失败: ' + error.message, 'error');
+            }
+        }
+
+        async function testMicrophone() {
+            log('开始测试麦克风...', 'info');
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: {
+                        sampleRate: 16000,
+                        channelCount: 1,
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                });
+
+                log('麦克风权限获取成功!', 'success');
+
+                // 测试音频录制
+                const audioContext = new AudioContext({ sampleRate: 16000 });
+                const source = audioContext.createMediaStreamSource(stream);
+                const processor = audioContext.createScriptProcessor(4096, 1, 1);
+
+                processor.onaudioprocess = function(event) {
+                    const inputBuffer = event.inputBuffer;
+                    const inputData = inputBuffer.getChannelData(0);
+
+                    // 计算音量
+                    const volume = Math.sqrt(inputData.reduce((sum, val) => sum + val * val, 0) / inputData.length);
+
+                    if (Math.random() < 0.01) { // 随机显示一些样本，避免刷屏
+                        log(`音频数据: 音量=${volume.toFixed(4)}, 样本数=${inputData.length}`, 'info');
+                    }
+                };
+
+                source.connect(processor);
+                processor.connect(audioContext.destination);
+
+                log('音频录制开始，请对着麦克风说话...', 'info');
+
+                // 10秒后停止
+                setTimeout(() => {
+                    stream.getTracks().forEach(track => track.stop());
+                    source.disconnect();
+                    processor.disconnect();
+                    audioContext.close();
+                    log('音频录制测试结束', 'info');
+                }, 10000);
+
+            } catch (error) {
+                log('麦克风测试失败: ' + error.message, 'error');
+                if (error.name === 'NotAllowedError') {
+                    log('请允许使用麦克风权限', 'error');
+                } else if (error.name === 'NotFoundError') {
+                    log('未找到麦克风设备', 'error');
+                }
+            }
+        }
+
+        function clearLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        // 页面加载完成后自动测试
+        window.onload = function() {
+            log('页面加载完成，开始调试...', 'info');
+            updateConnectionStatus(false);
+        };
+    </script>
+</body>
+</html>
