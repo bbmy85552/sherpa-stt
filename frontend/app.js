@@ -11,9 +11,6 @@ class SpeechRecognitionClient {
         this.autoReconnect = true;
         this.reconnectAttempts = 0;
         this.maxReconnectAttempts = 5;
-        this.lastAudioSentAt = 0;
-        this.heartbeatInterval = null;
-        this.heartbeatIntervalMs = 5000;
 
         // 回调函数
         this.onPartialResult = null;
@@ -31,8 +28,6 @@ class SpeechRecognitionClient {
                 console.log('WebSocket 连接成功');
                 this.isConnected = true;
                 this.reconnectAttempts = 0;
-                this.lastAudioSentAt = Date.now();
-                this.startHeartbeat();
 
                 // 发送配置消息
                 this.sendConfig({
@@ -59,7 +54,6 @@ class SpeechRecognitionClient {
             this.websocket.onclose = (event) => {
                 console.log('WebSocket 连接关闭:', event.code, event.reason);
                 this.isConnected = false;
-                this.stopHeartbeat();
 
                 if (this.onConnectionChange) {
                     this.onConnectionChange(false);
@@ -80,64 +74,29 @@ class SpeechRecognitionClient {
         }
     }
 
-    sendControlMessage(payload) {
-        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
-            this.websocket.send(JSON.stringify(payload));
-        }
-    }
-
     sendConfig(config) {
-        this.sendControlMessage(config);
+        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+            this.websocket.send(JSON.stringify(config));
+        }
     }
 
     sendAudioData(audioData) {
         if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
             this.websocket.send(audioData);
-            this.lastAudioSentAt = Date.now();
         }
     }
 
     sendDone() {
-        this.sendControlMessage({ type: "done" });
+        if (this.websocket && this.websocket.readyState === WebSocket.OPEN) {
+            this.websocket.send(JSON.stringify({ type: "done" }));
+        }
     }
 
     disconnect() {
         this.autoReconnect = false;
-        this.stopHeartbeat();
         if (this.websocket) {
             this.websocket.close();
         }
-    }
-
-    startHeartbeat() {
-        this.stopHeartbeat();
-        this.heartbeatInterval = setInterval(() => {
-            if (!this.websocket || this.websocket.readyState !== WebSocket.OPEN) {
-                return;
-            }
-            const now = Date.now();
-            if (now - this.lastAudioSentAt < this.heartbeatIntervalMs) {
-                return;
-            }
-            this.sendControlMessage({
-                type: "heartbeat",
-                timestamp: now
-            });
-        }, this.heartbeatIntervalMs);
-    }
-
-    stopHeartbeat() {
-        if (this.heartbeatInterval) {
-            clearInterval(this.heartbeatInterval);
-            this.heartbeatInterval = null;
-        }
-    }
-
-    sendPong() {
-        this.sendControlMessage({
-            type: "pong",
-            timestamp: Date.now()
-        });
     }
 
     handleMessage(message) {
@@ -165,14 +124,6 @@ class SpeechRecognitionClient {
             case 'error':
                 this.handleError(message);
                 break;
-
-            case 'ping':
-                this.sendPong();
-                break;
-
-            case 'timeout':
-                this.handleTimeout(message);
-                break;
         }
     }
 
@@ -182,13 +133,6 @@ class SpeechRecognitionClient {
         if (this.onError) {
             this.onError(error);
         }
-    }
-
-    handleTimeout(message) {
-        const error = {
-            message: message.message || '连接空闲超时'
-        };
-        this.handleError(error);
     }
 }
 
@@ -418,8 +362,8 @@ class SpeechRecognitionApp {
     }
 
     async initializeServices() {
-        // 初始化识别客户端
-        const wsUrl = `ws://${window.location.host}/ws/recognize`;
+        // 初始化识别客户端 - 连接到远程服务器
+        const wsUrl = `ws://106.53.170.240:8891/ws/recognize`;
         this.recognitionClient = new SpeechRecognitionClient(wsUrl);
 
         // 设置回调函数

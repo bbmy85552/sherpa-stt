@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SenseVoice 实时语音识别 - 远程版</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-microphone"></i> SenseVoice 实时语音识别</h1>
+            <p>基于 SenseVoice 的流式语音识别服务 | 连接到远程服务器 106.53.170.240:8891</p>
+        </header>
+
+        <main>
+            <!-- 控制面板 -->
+            <section class="control-panel">
+                <div class="controls">
+                    <button id="startBtn" class="btn btn-primary">
+                        <i class="fas fa-play"></i> 开始录音
+                    </button>
+                    <button id="stopBtn" class="btn btn-danger" disabled>
+                        <i class="fas fa-stop"></i> 停止录音
+                    </button>
+                    <button id="clearBtn" class="btn btn-secondary">
+                        <i class="fas fa-trash"></i> 清空结果
+                    </button>
+                </div>
+
+                <div class="settings">
+                    <div class="setting-item">
+                        <label for="languageSelect">语言:</label>
+                        <select id="languageSelect">
+                            <option value="auto">自动检测</option>
+                            <option value="zh">中文</option>
+                            <option value="en">英文</option>
+                            <option value="ja">日文</option>
+                            <option value="ko">韩文</option>
+                            <option value="yue">粤语</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>
+                            <input type="checkbox" id="useItn" checked>
+                            启用逆文本标准化
+                        </label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 状态指示器 -->
+            <section class="status-panel">
+                <div class="status-indicators">
+                    <div class="indicator">
+                        <span class="indicator-label">连接状态:</span>
+                        <span id="connectionStatus" class="status-value status-disconnected">
+                            <i class="fas fa-circle"></i> 未连接
+                        </span>
+                    </div>
+                    <div class="indicator">
+                        <span class="indicator-label">录音状态:</span>
+                        <span id="recordingStatus" class="status-value status-stopped">
+                            <i class="fas fa-circle"></i> 未录音
+                        </span>
+                    </div>
+                    <div class="indicator">
+                        <span class="indicator-label">音频质量:</span>
+                        <span id="audioQuality" class="status-value status-good">
+                            <i class="fas fa-circle"></i> 良好
+                        </span>
+                    </div>
+                </div>
+
+                <!-- 音频可视化 -->
+                <div class="audio-visualizer">
+                    <canvas id="audioCanvas" width="600" height="100"></canvas>
+                </div>
+            </section>
+
+            <!-- 识别结果 -->
+            <section class="results-panel">
+                <div class="results-header">
+                    <h3><i class="fas fa-file-alt"></i> 识别结果</h3>
+                    <div class="results-stats">
+                        <span id="segmentCount">段落: 0</span>
+                        <span id="wordCount">字数: 0</span>
+                    </div>
+                </div>
+
+                <!-- 实时识别结果 -->
+                <div class="partial-result-container">
+                    <h4>实时识别:</h4>
+                    <div id="partialResult" class="partial-result">
+                        <span class="placeholder">等待语音输入...</span>
+                    </div>
+                </div>
+
+                <!-- 最终识别结果 -->
+                <div class="final-results-container">
+                    <h4>识别历史:</h4>
+                    <div id="finalResults" class="final-results">
+                        <!-- 最终结果会动态添加到这里 -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- 错误和警告 -->
+            <section class="messages-panel">
+                <div id="errorMessage" class="message error-message" style="display: none;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span id="errorText"></span>
+                </div>
+                <div id="warningMessage" class="message warning-message" style="display: none;">
+                    <i class="fas fa-exclamation-circle"></i>
+                    <span id="warningText"></span>
+                </div>
+                <div id="infoMessage" class="message info-message" style="display: none;">
+                    <i class="fas fa-info-circle"></i>
+                    <span id="infoText"></span>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>&copy; 2024 SenseVoice 语音识别服务 | 基于 FastAPI + WebSocket</p>
+        </footer>
+    </div>
+
+    <!-- JavaScript 模块 -->
+    <script src="app.js" type="module"></script>
+</body>
+</html>

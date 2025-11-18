@@ -18,13 +18,13 @@ if [ ! -f "models/model.int8.onnx" ] || [ ! -f "models/tokens.txt" ] || [ ! -f "
 fi
 
 echo "🚀 启动开发服务器 (支持热重载)..."
-echo "📱 访问地址: http://localhost:8000"
+echo "📱 访问地址: http://localhost:8891"
 echo ""
 
 # 开发模式启动
 uvicorn main:app \
     --host 0.0.0.0 \
-    --port 8000 \
+    --port 8891 \
     --reload \
     --reload-dir static \
     --reload-dir . \
